@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from app.api.auth import router as auth_router
 from app.db.mongodb import (
     connect_to_mongodb,
     close_mongodb_connection
@@ -36,6 +36,8 @@ app = FastAPI(
     lifespan=lifespan
 
 )
+
+app.include_router(auth_router)
 
 @app.get("/")
 async def home():
