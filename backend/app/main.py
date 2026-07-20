@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-
+from app.api.follow import router as follow_router
 from fastapi import FastAPI
 from app.api.auth import router as auth_router
 from app.db.mongodb import (
@@ -36,7 +36,7 @@ app = FastAPI(
     lifespan=lifespan
 
 )
-
+app.include_router(follow_router)
 app.include_router(auth_router)
 
 @app.get("/")

@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
+from fastapi import Depends
 
+from app.schemas.auth import UserResponse
+from app.utils.dependencies import get_current_user
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
@@ -16,6 +19,14 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
+@router.get(
+    "/me",
+    response_model=UserResponse
+)
+async def me(
+    current_user=Depends(get_current_user),
+):
+    return current_user
 
 @router.post(
     "/register",
