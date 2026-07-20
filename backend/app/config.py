@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
 
     MONGO_URI: str
+    CELEBRITY_THRESHOLD = 10000
     DATABASE_NAME: str
 
     REDIS_HOST: str

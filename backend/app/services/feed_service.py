@@ -1,26 +1,22 @@
 from bson import ObjectId
+
+from app.db.mongodb import feeds, posts, follows, users
+
 import json
 
 import app.db.redis as redis_db
-from app.db.mongodb import feeds, posts, follows, users
-
-
 async def get_feed(user_id: str, page: int = 1, limit: int = 10):
-
     cache_key = f"feed:{user_id}"
 
-    # ----------------------------
-    # Check Redis Cache (Only Page 1)
-    # ----------------------------
     if page == 1 and redis_db.redis_client is not None:
 
         cached_feed = await redis_db.redis_client.get(cache_key)
 
         if cached_feed:
-            return json.loads(cached_feed)
 
+            return json.loads(cached_feed)
     # ----------------------------
-    # Precomputed Feed (Fan-Out-on-Write)
+    # Precomputed feed (Fan-Out-on-Write)
     # ----------------------------
     feed = await feeds.find_one(
         {
@@ -31,7 +27,7 @@ async def get_feed(user_id: str, page: int = 1, limit: int = 10):
     feed_posts = feed["posts"] if feed else []
 
     # ----------------------------
-    # Celebrity Posts (Fan-Out-on-Read)
+    # Celebrity posts (Fan-Out-on-Read)
     # ----------------------------
     follow_cursor = follows.find(
         {
@@ -83,12 +79,12 @@ async def get_feed(user_id: str, page: int = 1, limit: int = 10):
             ]
 
     # ----------------------------
-    # Merge Both Feeds
+    # Merge
     # ----------------------------
     merged = feed_posts + celebrity_posts
 
     # ----------------------------
-    # Remove Duplicate Posts
+    # Remove duplicates
     # ----------------------------
     unique = {}
 
@@ -98,7 +94,7 @@ async def get_feed(user_id: str, page: int = 1, limit: int = 10):
     merged = list(unique.values())
 
     # ----------------------------
-    # Sort by Newest
+    # Sort newest first
     # ----------------------------
     merged.sort(
         key=lambda x: x["created_at"],
@@ -117,7 +113,7 @@ async def get_feed(user_id: str, page: int = 1, limit: int = 10):
         return []
 
     # ----------------------------
-    # Fetch Post Details
+    # Fetch post details
     # ----------------------------
     post_ids = [
         item["post_id"]
@@ -153,21 +149,21 @@ async def get_feed(user_id: str, page: int = 1, limit: int = 10):
                 "id": str(post["_id"]),
                 "author_id": str(post["author_id"]),
                 "content": post["content"],
-                "created_at": post["created_at"].isoformat(),
+                "created_at": post["created_at"],
                 "like_count": post["like_count"],
                 "comment_count": post["comment_count"]
             }
         )
 
-    # ----------------------------
-    # Cache First Page
-    # ----------------------------
-    if page == 1 and redis_db.redis_client is not None:
+        if page == 1 and redis_db.redis_client is not None:
 
         await redis_db.redis_client.setex(
             cache_key,
-            300,  # 5 minutes
-            json.dumps(result)
+            300,
+            json.dumps(
+                result,
+                default=str
+            )
         )
 
     return result
